@@ -1,9 +1,9 @@
-# vue-tsgo
+# tsgoblin
 
 Fast, **vue-tsc-parity** type-checking of Vue SFCs, powered by the native TypeScript
 compiler **`tsgo`** (`@typescript/native-preview`, the TS 7 preview) — which is ~20-30x
 faster than `tsc` but has **no Volar language-plugin API**, so it cannot read `.vue`
-files. `vue-tsgo` makes it check Vue anyway, at native speed, with the **exact same
+files. `tsgoblin` makes it check Vue anyway, at native speed, with the **exact same
 diagnostics** vue-tsc would report.
 
 On a large real codebase (815 SFCs), a cold `vue-tsc --build` of ~120 s drops to
@@ -37,13 +37,12 @@ and injected `<script>` and `<template>` type errors surface at the identical
 
 ## Install
 
-Not published to a public registry (the unscoped `vue-tsgo` name is taken). Consume
-it straight from GitHub — the repo is public, so no auth is needed in CI:
+Consume it straight from GitHub as a pinned git dependency (no registry publish
+required; once the repo is public no auth is needed in CI):
 
 ```sh
-# as a pinned git dependency (recommended — reproducible)
-npm  add -D  "@alice-edu/vue-tsgo@github:alice-edu/vue-tsgo#v0.1.0"
-pnpm add -D  "@alice-edu/vue-tsgo@github:alice-edu/vue-tsgo#v0.1.0"
+npm  add -D  "tsgoblin@github:alice-edu/tsgoblin#v0.1.0"
+pnpm add -D  "tsgoblin@github:alice-edu/tsgoblin#v0.1.0"
 ```
 
 `@typescript/native-preview` (tsgo) is an optional peer — provide it in the consumer
@@ -55,28 +54,28 @@ Because the repo is public, a pipeline can just clone and run it — no token, n
 registry:
 
 ```sh
-git clone --depth 1 --branch v0.1.0 https://github.com/alice-edu/vue-tsgo /tmp/vue-tsgo
-( cd /tmp/vue-tsgo && npm install --omit=dev )   # installs the pinned codegen libs
-node /tmp/vue-tsgo/bin/cli.mjs generate path/to/tsconfig.json
-node /tmp/vue-tsgo/bin/cli.mjs check    path/to/tsconfig.tsgo.json --repo-root=. --baseline=path/to/baseline.json
+git clone --depth 1 --branch v0.1.0 https://github.com/alice-edu/tsgoblin /tmp/tsgoblin
+( cd /tmp/tsgoblin && npm install --omit=dev )   # installs the pinned codegen libs
+node /tmp/tsgoblin/bin/cli.mjs generate path/to/tsconfig.json
+node /tmp/tsgoblin/bin/cli.mjs check    path/to/tsconfig.tsgo.json --repo-root=. --baseline=path/to/baseline.json
 ```
 
-or, if it's a git dependency, the `vue-tsgo` bin is on `node_modules/.bin`.
+or, if it's a git dependency, the `tsgoblin` bin is on `node_modules/.bin`.
 
 ## Usage
 
 ```sh
 # 1. generate the virtual TS + manifest for a project
-vue-tsgo generate tsconfig.json [--incremental] [--src-dir=<dir>]
+tsgoblin generate tsconfig.json [--incremental] [--src-dir=<dir>]
 
 # 2. run tsgo and filter to vue-tsc-parity diagnostics
-vue-tsgo check tsconfig.tsgo.json \
+tsgoblin check tsconfig.tsgo.json \
   --repo-root=. \
-  --baseline=./vue-tsgo-baseline.json \
-  [--incremental] [--maps=<other-pkg>/.vue-tsgo-maps.json ...]
+  --baseline=./tsgoblin-baseline.json \
+  [--incremental] [--maps=<other-pkg>/.tsgoblin-maps.json ...]
 
 # regenerate the reviewed divergence baseline after a deliberate, reviewed change
-vue-tsgo check tsconfig.tsgo.json --baseline=./vue-tsgo-baseline.json --write-baseline
+tsgoblin check tsconfig.tsgo.json --baseline=./tsgoblin-baseline.json --write-baseline
 ```
 
 `tsconfig.tsgo.json` typically `extends` your real tsconfig, sets `noEmit`, includes
@@ -86,7 +85,7 @@ Keep any project references so cross-package types resolve as declaration bounda
 ### Incremental
 
 `--incremental` makes both halves stateful: `generate` keeps a content-hash cache
-(`.vue-tsgo-cache.json`) and skips unchanged SFCs (guarded by a `CODEGEN_VERSION` so it
+(`.tsgoblin-cache.json`) and skips unchanged SFCs (guarded by a `CODEGEN_VERSION` so it
 can never serve stale output); `check` passes `--incremental` + a `.tsbuildinfo` to
 tsgo.
 
@@ -102,7 +101,7 @@ options, mirroring `vue-tsc --build`'s per-project isolation.
 ## Caveats
 
 `tsgo` is a **preview** compiler. Keep `vue-tsc` as the authoritative CI gate and use
-`vue-tsgo` as the fast local/pre-check gate. As Volar ships native tsgo integration,
+`tsgoblin` as the fast local/pre-check gate. As Volar ships native tsgo integration,
 this tool becomes unnecessary.
 
 ## Development

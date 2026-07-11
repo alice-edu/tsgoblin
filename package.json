@@ -1,10 +1,10 @@
 {
-  "name": "@alice-edu/vue-tsgo",
+  "name": "tsgoblin",
   "version": "0.1.0",
   "description": "Fast, vue-tsc-parity Vue SFC type-checking powered by the native TypeScript compiler (tsgo).",
   "type": "module",
   "bin": {
-    "vue-tsgo": "bin/cli.mjs"
+    "tsgoblin": "bin/cli.mjs"
   },
   "files": [
     "bin",
@@ -26,7 +26,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alice-edu/vue-tsgo.git"
+    "url": "git+https://github.com/alice-edu/tsgoblin.git"
   },
   "dependencies": {
     "@volar/language-core": "2.4.27",

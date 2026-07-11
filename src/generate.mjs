@@ -1,4 +1,4 @@
-// vue-tsgo codegen: emit sibling `*.vue.ts` "service code" for every SFC so the
+// tsgoblin codegen: emit sibling `*.vue.ts` "service code" for every SFC so the
 // native tsgo checker (which has no Volar plugin API) can type-check them, AND
 // emit a verification-mapping manifest so tsgo's raw diagnostics can be filtered
 // down to exactly the set Volar (vue-tsc) would surface.
@@ -14,7 +14,7 @@
 // Parity: Volar suppresses diagnostics whose generated range is NOT covered by a
 // mapping with `data.verification` truthy (that's how vue-tsc reports 0 errors on
 // template glue that raw tsc/tsgo would flag). We persist every verification-enabled
-// generated range (banner-adjusted) + its source offset to `.vue-tsgo-maps.json` so
+// generated range (banner-adjusted) + its source offset to `.tsgoblin-maps.json` so
 // `check.mjs` can drop non-verification diagnostics and remap survivors to `.vue`.
 
 import * as fs from 'node:fs'
@@ -27,7 +27,7 @@ import { forEachEmbeddedCode } from '@volar/language-core'
 
 // Fixed-length banner so a single constant offset relates on-disk offsets to the
 // Volar `generatedOffsets` (which are relative to the un-bannered service text).
-const BANNER = '// @vue-tsgo generated — DO NOT EDIT\n'
+const BANNER = '// @tsgoblin generated — DO NOT EDIT\n'
 const BANNER_LEN = BANNER.length
 
 // Volar emits syntactically-broken glue for a few tolerated template idioms
@@ -59,9 +59,9 @@ const incremental = argv.includes('--incremental')
 const srcDirOpt = argv.find((a) => a.startsWith('--src-dir='))?.slice('--src-dir='.length)
 const configPath = path.resolve(argv.find((a) => !a.startsWith('--')) ?? 'tsconfig.json')
 const dir = path.dirname(configPath)
-const manifestPath = path.join(dir, '.vue-tsgo-generated.json')
-const mapsPath = path.join(dir, '.vue-tsgo-maps.json')
-const cachePath = path.join(dir, '.vue-tsgo-cache.json')
+const manifestPath = path.join(dir, '.tsgoblin-generated.json')
+const mapsPath = path.join(dir, '.tsgoblin-maps.json')
+const cachePath = path.join(dir, '.tsgoblin-cache.json')
 
 const parsed = createParsedCommandLine(ts, ts.sys, configPath)
 const { options, vueOptions, fileNames } = parsed
@@ -186,5 +186,5 @@ fs.writeFileSync(cachePath, JSON.stringify({ version: CODEGEN_VERSION, files: ca
 
 const ms = Math.round(performance.now() - t0)
 console.log(
-  `[vue-tsgo] ${incremental ? 'incremental: ' : ''}generated ${written}, reused ${reused}, removed ${removed} (skipped ${skipped}) — ${vueFiles.length} SFCs in ${ms}ms`,
+  `[tsgoblin] ${incremental ? 'incremental: ' : ''}generated ${written}, reused ${reused}, removed ${removed} (skipped ${skipped}) — ${vueFiles.length} SFCs in ${ms}ms`,
 )

@@ -1,4 +1,4 @@
-// vue-tsgo self-test — proves the de-Aliced package works standalone against a
+// tsgoblin self-test — proves the de-Aliced package works standalone against a
 // tiny fixture Vue project: clean tree ⇒ 0 real errors, and an injected script
 // type error ⇒ caught, remapped to the .vue source position.
 import * as fs from 'node:fs'
@@ -37,7 +37,7 @@ function runCheck() {
   return { exit: r.status, diags }
 }
 
-console.log('[vue-tsgo selftest]')
+console.log('[tsgoblin selftest]')
 
 // 1. Clean fixture ⇒ 0 real errors.
 generate()
@@ -66,5 +66,5 @@ try {
 
 // leave the fixture tree clean
 generate()
-console.log(failures === 0 ? '\n[vue-tsgo selftest] PASS' : `\n[vue-tsgo selftest] FAIL (${failures})`)
+console.log(failures === 0 ? '\n[tsgoblin selftest] PASS' : `\n[tsgoblin selftest] FAIL (${failures})`)
 process.exit(failures === 0 ? 0 : 1)

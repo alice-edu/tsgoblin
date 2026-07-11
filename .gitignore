@@ -1,6 +1,6 @@
 node_modules/
 package-lock.json
 test/fixture/src/**/*.vue.ts
-test/fixture/.vue-tsgo-generated.json
-test/fixture/.vue-tsgo-maps.json
-test/fixture/.vue-tsgo-cache.json
+test/fixture/.tsgoblin-generated.json
+test/fixture/.tsgoblin-maps.json
+test/fixture/.tsgoblin-cache.json

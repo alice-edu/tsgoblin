@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// vue-tsgo CLI — thin dispatcher over the codegen (generate) and parity filter (check).
+// tsgoblin CLI — thin dispatcher over the codegen (generate) and parity filter (check).
 //
-//   vue-tsgo generate <tsconfig> [--incremental] [--src-dir=<dir>]
-//   vue-tsgo check    <tsconfig> [--incremental] [--repo-root=<dir>]
+//   tsgoblin generate <tsconfig> [--incremental] [--src-dir=<dir>]
+//   tsgoblin check    <tsconfig> [--incremental] [--repo-root=<dir>]
 //                                [--baseline=<path>] [--maps=<path> ...]
 //                                [--write-baseline] [--build]
 //
@@ -15,7 +15,7 @@ const [cmd, ...rest] = process.argv.slice(2)
 const scripts = { generate: 'generate.mjs', check: 'check.mjs' }
 
 if (!scripts[cmd]) {
-  console.error('Usage: vue-tsgo <generate|check> <tsconfig> [options]\n')
+  console.error('Usage: tsgoblin <generate|check> <tsconfig> [options]\n')
   console.error('  generate <tsconfig> [--incremental] [--src-dir=<dir>]')
   console.error('  check    <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--maps=<path> ...]')
   process.exit(2)

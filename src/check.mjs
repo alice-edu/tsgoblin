@@ -1,4 +1,4 @@
-// vue-tsgo parity filter: run tsgo over the generated tree, then filter its raw
+// tsgoblin parity filter: run tsgo over the generated tree, then filter its raw
 // diagnostics down to the exact set vue-tsc (Volar) would report.
 //
 // For diagnostics in generated `*.vue.ts`, Volar only surfaces those whose generated
@@ -6,11 +6,11 @@
 // rest and remap survivors back to the original `.vue` source position. Diagnostics in
 // real `.ts` files pass through unchanged.
 //
-// Usage: node scripts/vue-tsgo/check.mjs <tsconfig> [--build] [--incremental]
+// Usage: node scripts/tsgoblin/check.mjs <tsconfig> [--build] [--incremental]
 //                                        [--maps=<path> ...]
 //
 // <tsconfig> is resolved against cwd; tsgo runs with cwd = its directory ("root").
-// The verification manifest defaults to <root>/.vue-tsgo-maps.json; pass --maps=<p>
+// The verification manifest defaults to <root>/.tsgoblin-maps.json; pass --maps=<p>
 // (repeatable) to merge additional packages' manifests for a unified whole-FE check.
 // All display + baseline paths are repo-relative so a divergence has one stable key
 // regardless of which config surfaces it.
@@ -49,11 +49,11 @@ const baselineKey = (file, code, msg) => `${file}::${code}::${msg.slice(0, MSG_K
 const baselineKeys = new Set(baseline.map((e) => baselineKey(e.file, e.code, e.msg)))
 
 // Merge the default manifest with any --maps= manifests (files keyed by abs path).
-const mapsPaths = [path.join(root, '.vue-tsgo-maps.json'), ...extraMaps]
+const mapsPaths = [path.join(root, '.tsgoblin-maps.json'), ...extraMaps]
 const maps = { files: {} }
 for (const mp of mapsPaths) {
   if (!fs.existsSync(mp)) {
-    console.error(`[vue-tsgo] missing ${mp} — run \`vue-tsgo generate\` first`)
+    console.error(`[tsgoblin] missing ${mp} — run \`tsgoblin generate\` first`)
     process.exit(2)
   }
   Object.assign(maps.files, JSON.parse(fs.readFileSync(mp, 'utf8')).files)
@@ -163,7 +163,7 @@ for (let i = 0; i < lines.length; i++) {
 // --write-baseline: emit the current survivors as the reviewed divergence baseline.
 if (writeBaseline) {
   if (!baselinePath) {
-    console.error('[vue-tsgo] --write-baseline requires --baseline=<path>')
+    console.error('[tsgoblin] --write-baseline requires --baseline=<path>')
     process.exit(2)
   }
   const entries = survivors.map((s) => ({
@@ -173,7 +173,7 @@ if (writeBaseline) {
     reason: 'TODO: document why tsgo diverges from tsc here',
   }))
   fs.writeFileSync(baselinePath, JSON.stringify({ entries }, null, 2) + '\n')
-  console.error(`[vue-tsgo] wrote ${entries.length} baseline entries to ${baselinePath}`)
+  console.error(`[tsgoblin] wrote ${entries.length} baseline entries to ${baselinePath}`)
   process.exit(0)
 }
 
@@ -195,12 +195,12 @@ const stale = baseline.filter(
 for (const s of real) console.log(`${s.file}(${s.line},${s.col}): ${s.sev} ${s.code}: ${s.msg}`)
 
 if (stale.length) {
-  console.error(`\n[vue-tsgo] ⚠️ ${stale.length} stale baseline entr${stale.length === 1 ? 'y' : 'ies'} (no longer reported — clean these up):`)
+  console.error(`\n[tsgoblin] ⚠️ ${stale.length} stale baseline entr${stale.length === 1 ? 'y' : 'ies'} (no longer reported — clean these up):`)
   for (const e of stale) console.error(`  - ${e.file} ${e.code} "${e.msg}"`)
 }
 
 console.error(
-  `\n[vue-tsgo] tsgo ${tsgoMs}ms · ${real.length} real error(s) · ` +
+  `\n[tsgoblin] tsgo ${tsgoMs}ms · ${real.length} real error(s) · ` +
     `${survivors.length - real.length} accepted divergence(s) · ${droppedVue} template-glue diagnostics suppressed`,
 )
 process.exit(real.length > 0 ? 1 : 0)
