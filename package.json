@@ -1,0 +1,48 @@
+{
+  "name": "vue-tsgo",
+  "version": "0.1.0",
+  "description": "Fast, vue-tsc-parity Vue SFC type-checking powered by the native TypeScript compiler (tsgo).",
+  "type": "module",
+  "bin": {
+    "vue-tsgo": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "selftest": "node test/selftest.mjs"
+  },
+  "keywords": [
+    "vue",
+    "vue-tsc",
+    "tsgo",
+    "typescript",
+    "type-check",
+    "volar",
+    "sfc"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alice-edu/vue-tsgo.git"
+  },
+  "peerDependencies": {
+    "@typescript/native-preview": "*",
+    "@volar/language-core": ">=2",
+    "@vue/language-core": ">=2 <4",
+    "typescript": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "@typescript/native-preview": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "@volar/language-core": "2.4.27",
+    "@vue/language-core": "3.2.2",
+    "typescript": "5.9.3"
+  }
+}
