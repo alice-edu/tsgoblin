@@ -1,0 +1,33 @@
+name: publish
+
+# Publishes to npm on a GitHub Release, via npm Trusted Publishing (OIDC) — no
+# long-lived NPM token to store or rotate. `--provenance` records a signed link from
+# the npm package back to this repo + commit (visible on npmjs.com). The parity gate
+# runs first, so a release that doesn't match vue-tsc never ships.
+#
+# One-time setup on npmjs.com: package "tsgoblin" → Settings → Trusted Publisher →
+# GitHub Actions → repo alice-edu/tsgoblin, workflow publish.yml.
+# To release: bump "version" in package.json, then create a GitHub Release (tag vX.Y.Z).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC trusted publishing + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.17.0"
+          registry-url: "https://registry.npmjs.org"
+      # Trusted publishing / provenance needs a recent npm.
+      - run: npm install -g npm@latest
+      - run: npm install --no-audit --no-fund
+      - run: npm test # selftest + parity vs vue-tsc — never publish a broken/drifted build
+      - run: npm publish --provenance --access public
