@@ -1,11 +1,12 @@
 name: publish
 
-# Publishes to npm on a GitHub Release (or manual dispatch), authenticating with the
-# NPM_TOKEN repo secret. Use an npm *Automation* access token (it bypasses 2FA, which
-# CI can't satisfy interactively). `--provenance` records a signed link from the npm
-# package back to this repo + commit. The parity gate runs first, so a release that
-# doesn't match vue-tsc never ships.
+# Publishes to npm on a GitHub Release (or manual dispatch) via npm Trusted
+# Publishing (OIDC) — NO token stored anywhere; GitHub authenticates to npm directly,
+# and `--provenance` records a signed link from the package back to this commit.
+# The parity gate runs first, so a release that doesn't match vue-tsc never ships.
 #
+# One-time setup on npmjs.com (see repo README / the chat): register this repo +
+# workflow as a Trusted Publisher for the `tsgoblin` package.
 # To release: bump "version" in package.json, then create a GitHub Release (tag vX.Y.Z),
 # or run this workflow manually (workflow_dispatch).
 on:
@@ -15,7 +16,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # for --provenance attestation
+  id-token: write # required for OIDC trusted publishing + provenance
 
 jobs:
   publish:
@@ -24,10 +25,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22.17.0"
+          node-version: "24" # ships npm ≥11.5 (needed for trusted publishing)
           registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@latest # ensure trusted-publishing support
       - run: npm install --no-audit --no-fund
       - run: npm test # selftest + parity vs vue-tsc — never publish a broken/drifted build
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
