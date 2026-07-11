@@ -135,7 +135,7 @@ const res = spawnSync(tsgo, args, { cwd: root, encoding: 'utf8', maxBuffer: 256 
 const tsgoMs = Math.round(performance.now() - t0)
 const out = (res.stdout || '') + (res.stderr || '')
 
-// Parse: `path(line,col): error TSxxxx: message`  (relative to alice-client-core cwd)
+// Parse: `path(line,col): error TSxxxx: message`  (paths relative to the tsgo cwd)
 const diagRe = /^(.+?)\((\d+),(\d+)\): (error|warning) (TS\d+): (.*)$/
 const lines = out.split('\n')
 let droppedVue = 0
