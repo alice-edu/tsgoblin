@@ -108,8 +108,15 @@ this tool becomes unnecessary.
 
 ```sh
 npm install
-npm run selftest   # generate + check a fixture SFC project; asserts parity
+npm test           # selftest + parity
 ```
+
+- `npm run selftest` — self-consistency on a fixture SFC project (clean ⇒ 0; injected
+  error caught + remapped to the `.vue`).
+- `npm run parity` — the real contract: asserts tsgoblin's diagnostics **equal real
+  `vue-tsc`'s** on the fixture. This is the guard that catches drift when the pinned
+  `@typescript/native-preview` (tsgo) or `@vue/language-core` is bumped — CI runs it on
+  every push and weekly (cron), so a parity-breaking upstream release turns CI red.
 
 ## License
 

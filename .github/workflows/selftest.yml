@@ -1,16 +1,16 @@
-name: selftest
+name: test
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
   # tsgo is a preview compiler that ships frequent dev builds — a weekly run catches
-  # when a new tsgo (or @vue/language-core) release breaks codegen/parity.
+  # when a new tsgo (or @vue/language-core) release breaks codegen or vue-tsc parity.
   schedule:
     - cron: "0 6 * * 1"
 
 jobs:
-  selftest:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +18,5 @@ jobs:
         with:
           node-version: "22.17.0"
       - run: npm install --no-audit --no-fund
-      - run: npm run selftest
+      # selftest (self-consistency) + parity (diagnostics === real vue-tsc)
+      - run: npm test

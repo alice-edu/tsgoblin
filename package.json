@@ -13,7 +13,9 @@
   ],
   "scripts": {
     "selftest": "node test/selftest.mjs",
-    "prepublishOnly": "node test/selftest.mjs"
+    "parity": "node test/parity.mjs",
+    "test": "node test/selftest.mjs && node test/parity.mjs",
+    "prepublishOnly": "node test/selftest.mjs && node test/parity.mjs"
   },
   "keywords": [
     "vue",
@@ -43,6 +45,7 @@
     }
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260707.2"
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "vue-tsc": "3.2.2"
   }
 }
