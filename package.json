@@ -1,5 +1,5 @@
 {
-  "name": "vue-tsgo",
+  "name": "@alice-edu/vue-tsgo",
   "version": "0.1.0",
   "description": "Fast, vue-tsc-parity Vue SFC type-checking powered by the native TypeScript compiler (tsgo).",
   "type": "module",

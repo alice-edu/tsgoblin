@@ -37,11 +37,31 @@ and injected `<script>` and `<template>` type errors surface at the identical
 
 ## Install
 
+Not published to a public registry (the unscoped `vue-tsgo` name is taken). Consume
+it straight from GitHub — the repo is public, so no auth is needed in CI:
+
 ```sh
-npm add -D vue-tsgo
-# peers (usually already present in a Vue project): typescript, @vue/language-core,
-# @volar/language-core, and @typescript/native-preview (tsgo)
+# as a pinned git dependency (recommended — reproducible)
+npm  add -D  "@alice-edu/vue-tsgo@github:alice-edu/vue-tsgo#v0.1.0"
+pnpm add -D  "@alice-edu/vue-tsgo@github:alice-edu/vue-tsgo#v0.1.0"
 ```
+
+`@typescript/native-preview` (tsgo) is an optional peer — provide it in the consumer
+(the `tsgo` binary is discovered by walking up `node_modules`).
+
+### Use from a CI pipeline
+
+Because the repo is public, a pipeline can just clone and run it — no token, no
+registry:
+
+```sh
+git clone --depth 1 --branch v0.1.0 https://github.com/alice-edu/vue-tsgo /tmp/vue-tsgo
+( cd /tmp/vue-tsgo && npm install --omit=dev )   # installs the pinned codegen libs
+node /tmp/vue-tsgo/bin/cli.mjs generate path/to/tsconfig.json
+node /tmp/vue-tsgo/bin/cli.mjs check    path/to/tsconfig.tsgo.json --repo-root=. --baseline=path/to/baseline.json
+```
+
+or, if it's a git dependency, the `vue-tsgo` bin is on `node_modules/.bin`.
 
 ## Usage
 
