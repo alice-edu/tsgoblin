@@ -26,7 +26,6 @@ jobs:
         with:
           node-version: "22.17.0"
           registry-url: "https://registry.npmjs.org"
-      - run: npm install -g npm@latest # recent npm for provenance
       - run: npm install --no-audit --no-fund
       - run: npm test # selftest + parity vs vue-tsc — never publish a broken/drifted build
       - run: npm publish --provenance --access public
