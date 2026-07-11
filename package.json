@@ -12,7 +12,8 @@
     "README.md"
   ],
   "scripts": {
-    "selftest": "node test/selftest.mjs"
+    "selftest": "node test/selftest.mjs",
+    "prepublishOnly": "node test/selftest.mjs"
   },
   "keywords": [
     "vue",
