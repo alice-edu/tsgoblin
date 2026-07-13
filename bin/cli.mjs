@@ -1,10 +1,14 @@
 #!/usr/bin/env node
-// tsgoblin CLI — thin dispatcher over the codegen (generate) and parity filter (check).
+// tsgoblin CLI — thin dispatcher over the codegen (generate), parity filter (check),
+// multi-package orchestrator (check-all), and engine smoke-test (selftest).
 //
-//   tsgoblin generate <tsconfig> [--incremental] [--src-dir=<dir>]
-//   tsgoblin check    <tsconfig> [--incremental] [--repo-root=<dir>]
-//                                [--baseline=<path>] [--maps=<path> ...]
-//                                [--write-baseline] [--build]
+//   tsgoblin generate  <tsconfig> [--incremental] [--src-dir=<dir>]
+//   tsgoblin check     <tsconfig> [--incremental] [--repo-root=<dir>]
+//                                 [--baseline=<path>] [--maps=<path> ...]
+//                                 [--write-baseline] [--build]
+//   tsgoblin check-all <config.json> [--incremental]
+//   tsgoblin selftest  <check-tsconfig> [--generate=<tsconfig>] [--src-dir=<dir>]
+//                                 [--repo-root=<dir>] [--baseline=<path>]
 //
 // See README.md for the full model.
 import { spawnSync } from 'node:child_process'
@@ -12,12 +16,19 @@ import * as path from 'node:path'
 
 const here = path.dirname(new URL(import.meta.url).pathname)
 const [cmd, ...rest] = process.argv.slice(2)
-const scripts = { generate: 'generate.mjs', check: 'check.mjs' }
+const scripts = {
+  generate: 'generate.mjs',
+  check: 'check.mjs',
+  'check-all': 'check-all.mjs',
+  selftest: 'selftest.mjs',
+}
 
 if (!scripts[cmd]) {
-  console.error('Usage: tsgoblin <generate|check> <tsconfig> [options]\n')
-  console.error('  generate <tsconfig> [--incremental] [--src-dir=<dir>]')
-  console.error('  check    <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--maps=<path> ...]')
+  console.error('Usage: tsgoblin <generate|check|check-all|selftest> <arg> [options]\n')
+  console.error('  generate  <tsconfig> [--incremental] [--src-dir=<dir>]')
+  console.error('  check     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--maps=<path> ...]')
+  console.error('  check-all <config.json> [--incremental]')
+  console.error('  selftest  <check-tsconfig> [--generate=<tsconfig>] [--src-dir=<dir>] [--repo-root=<dir>] [--baseline=<path>]')
   process.exit(2)
 }
 

@@ -124,11 +124,14 @@ function remap(genFileAbs, line, col) {
 
 const incremental = process.argv.includes('--incremental')
 const tsgo = findTsgo()
+// --pretty false forces the machine-parseable `path(line,col): error TSxxxx:` format.
+// tsgo does NOT auto-disable pretty/ANSI on a non-TTY pipe, so without this the diag
+// regex below matches nothing (silent false-green).
 const args = buildMode
-  ? ['--build', tsconfigArg, '--verbose']
+  ? ['--build', tsconfigArg, '--verbose', '--pretty', 'false']
   : incremental
-    ? ['-p', tsconfigArg, '--incremental', '--tsBuildInfoFile', 'dist/.tsgo-tsbuildinfo']
-    : ['--noEmit', '-p', tsconfigArg]
+    ? ['-p', tsconfigArg, '--incremental', '--tsBuildInfoFile', 'dist/.tsgo-tsbuildinfo', '--pretty', 'false']
+    : ['--noEmit', '-p', tsconfigArg, '--pretty', 'false']
 
 const t0 = performance.now()
 const res = spawnSync(tsgo, args, { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })

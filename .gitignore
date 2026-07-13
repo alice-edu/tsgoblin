@@ -1,6 +1,12 @@
 node_modules/
 package-lock.json
+pnpm-lock.yaml
+*.tgz
 test/fixture/src/**/*.vue.ts
 test/fixture/.tsgoblin-generated.json
 test/fixture/.tsgoblin-maps.json
 test/fixture/.tsgoblin-cache.json
+test/fixture/dist-tsgo/
+test/fixture/dist/
+test/fixture/.tsgo-tsbuildinfo
+test/fixture/**/*.tsbuildinfo

@@ -82,6 +82,60 @@ tsgoblin check tsconfig.tsgo.json --baseline=./tsgoblin-baseline.json --write-ba
 `src/**/*.ts` (which now picks up the generated `*.vue.ts`) and **excludes** `*.vue`.
 Keep any project references so cross-package types resolve as declaration boundaries.
 
+### Whole-repo orchestration (`check-all`)
+
+`check-all` runs `generate` → optional decl-`emit` → `check` for an ordered list of
+packages from one JSON config, so a monorepo's whole-FE check is a single command and
+the consumer keeps only config (no orchestration script). It exits non-zero iff any
+package has real errors, printing a per-package PASS/FAIL summary.
+
+```sh
+tsgoblin check-all tsgoblin.config.json [--incremental]
+```
+
+```jsonc
+{
+  "repoRoot": ".",                        // optional, rel. to config file; default = config dir
+  "baseline": "./tsgoblin-baseline.json", // optional, rel. to config file; forwarded to every check
+  "packages": [                           // ordered — earlier packages emit decls later ones consume
+    {
+      "name": "core",                     // optional label; default = basename(dir)
+      "dir": "alice-client-core",         // required, rel. to repoRoot
+      "generate": "tsconfig.json",        // required, rel. to dir — codegen config
+      "emit": "tsconfig.tsgo-emit.json",  // optional, rel. to dir — `tsgo -b` decl emit for downstream
+      "check": "tsconfig.tsgo.json"       // required, rel. to dir — parity-filtered check
+    },
+    {
+      "name": "web",
+      "dir": "alice-client-v2",
+      "generate": "tsconfig.app.json",
+      "check": "tsconfig.tsgo.json"       // consumes core's emitted decls
+    }
+  ]
+}
+```
+
+The `emit` step is **best-effort**: `tsgo -b <emit-tsconfig>` surfaces the same
+template-glue the `check` filters (which never affects the public component types a
+downstream package consumes), so its output is swallowed and reported as a one-line
+suppressed count. Each package's own correctness is gated by its `check`, not the emit.
+
+### Smoke-test the engine against your tsconfig (`selftest`)
+
+`selftest` proves the engine detects errors against a consumer's real tsconfig: it
+injects a synthetic probe SFC with a known `<script>` (TS2322) and `<template>` (TS2345)
+error under the config's `src` dir, runs `generate` + `check`, asserts both surface at
+the exact remapped `.vue` (line,col), and that a clean tree reports 0 — then removes the
+probe and restores a clean generated tree.
+
+```sh
+tsgoblin selftest tsconfig.tsgo.json \
+  [--generate=tsconfig.json]  # codegen config; default = the check-tsconfig
+  [--src-dir=src]             # SFC root the probe is written under; default = <config-dir>/src
+  [--repo-root=.]             # display-path root; default = <config-dir>
+  [--baseline=./tsgoblin-baseline.json]
+```
+
 ### Incremental
 
 `--incremental` makes both halves stateful: `generate` keeps a content-hash cache
@@ -117,6 +171,10 @@ npm test           # selftest + parity
   `vue-tsc`'s** on the fixture. This is the guard that catches drift when the pinned
   `@typescript/native-preview` (tsgo) or `@vue/language-core` is bumped — CI runs it on
   every push and weekly (cron), so a parity-breaking upstream release turns CI red.
+- `npm run engine` — exercises the `selftest` and `check-all` subcommands against the
+  fixture: clean ⇒ 0 plus injected `<script>`/`<template>` errors at exact positions,
+  incremental-codegen === full-regen manifest determinism, and clean multi-package
+  `check-all` ⇒ PASS/exit 0.
 
 ## License
 
