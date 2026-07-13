@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // tsgoblin CLI — thin dispatcher over the codegen (generate), parity filter (check),
-// multi-package orchestrator (check-all), and engine smoke-test (selftest).
+// the vue-tsc `--build` drop-in (build), multi-package orchestrator (check-all), and
+// engine smoke-test (selftest).
 //
+//   tsgoblin build     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>]
 //   tsgoblin generate  <tsconfig> [--incremental] [--src-dir=<dir>]
 //   tsgoblin check     <tsconfig> [--incremental] [--repo-root=<dir>]
 //                                 [--baseline=<path>] [--maps=<path> ...]
@@ -17,6 +19,7 @@ import * as path from 'node:path'
 const here = path.dirname(new URL(import.meta.url).pathname)
 const [cmd, ...rest] = process.argv.slice(2)
 const scripts = {
+  build: 'build.mjs',
   generate: 'generate.mjs',
   check: 'check.mjs',
   'check-all': 'check-all.mjs',
@@ -24,7 +27,8 @@ const scripts = {
 }
 
 if (!scripts[cmd]) {
-  console.error('Usage: tsgoblin <generate|check|check-all|selftest> <arg> [options]\n')
+  console.error('Usage: tsgoblin <build|generate|check|check-all|selftest> <arg> [options]\n')
+  console.error('  build     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>]  (vue-tsc --build drop-in)')
   console.error('  generate  <tsconfig> [--incremental] [--src-dir=<dir>]')
   console.error('  check     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--maps=<path> ...]')
   console.error('  check-all <config.json> [--incremental]')

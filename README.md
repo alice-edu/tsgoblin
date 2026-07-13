@@ -90,6 +90,41 @@ or, if it's a git dependency, the `tsgoblin` bin is on `node_modules/.bin`.
 
 ## Usage
 
+### `build` — the `vue-tsc --build` drop-in (recommended)
+
+Point `build` at your project's **real** `tsconfig.json` — the same composite,
+`.vue`-including, `references`-having config `tsc -b` / `vue-tsc --build` already uses —
+and everything else is internal. No `.tsgo` variant, no emit variant, no orchestration
+config.
+
+```sh
+tsgoblin build alice-client-v2/tsconfig.app.json \
+  --repo-root=. \
+  --baseline=./tsgoblin-baseline.json \
+  [--incremental]
+```
+
+It walks the project-reference graph, classifies each project as **has-`.vue`** (gets
+codegen + an ephemeral internal derived config) vs **pure-TS** (built from its real
+config, e.g. a backend), codegens `*.vue.ts`, then runs a single native `tsgo -b`. Build
+mode topo-sorts the graph, emits each referenced project's decls, and **redirects
+cross-project source imports to those decls** — so a downstream `.vue` type-checks
+against an upstream `.vue` component's types, exactly like `vue-tsc --build`'s
+per-project isolation, with each project keeping its own compiler options. Output is the
+parity-filtered set (every package's manifest merged), remapped to `.vue`. Exits non-zero
+iff any real errors remain after `--baseline`.
+
+The consumer footprint collapses to: the real tsconfig graph (unchanged) + an optional
+`tsgoblin-baseline.json` + this one command. The internal derived configs
+(`.tsgoblin-build.tsconfig.json`), `*.vue.ts`, manifests, and `.tsgoblin-build/` decls
+are ephemeral tool artifacts — gitignore them.
+
+> `check-all` (below) and the low-level `generate`/`check` primitives remain for
+> non-composite trees, flat single-program checks, or engine smoke-tests. For a normal
+> composite Vue monorepo, prefer `build`.
+
+### Low-level primitives (`generate` + `check`)
+
 ```sh
 # 1. generate the virtual TS + manifest for a project
 tsgoblin generate tsconfig.json [--incremental] [--src-dir=<dir>]
@@ -201,6 +236,12 @@ npm test           # selftest + parity
   fixture: clean ⇒ 0 plus injected `<script>`/`<template>` errors at exact positions,
   incremental-codegen === full-regen manifest determinism, and clean multi-package
   `check-all` ⇒ PASS/exit 0.
+- `npm run build-test` — exercises `build` against a **multi-package** fixture where a
+  downstream has-`.vue` package project-references an upstream has-`.vue` package: clean
+  ⇒ 0, a downstream `.vue` violating the upstream `.vue` component's prop type caught at
+  the exact `.vue` (line,col) **through the native `-b` decl redirect**, injected
+  `<script>`/`<template>` errors at exact positions, and cross-package incremental
+  determinism.
 
 ## License
 

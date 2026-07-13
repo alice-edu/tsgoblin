@@ -10,3 +10,10 @@ test/fixture/dist-tsgo/
 test/fixture/dist/
 test/fixture/.tsgo-tsbuildinfo
 test/fixture/**/*.tsbuildinfo
+test/fixture-multi/**/*.vue.ts
+test/fixture-multi/**/.tsgoblin-generated.json
+test/fixture-multi/**/.tsgoblin-maps.json
+test/fixture-multi/**/.tsgoblin-cache.json
+test/fixture-multi/**/.tsgoblin-build.tsconfig.json
+test/fixture-multi/**/.tsgoblin-build/
+test/fixture-multi/**/dist/
