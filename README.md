@@ -35,6 +35,32 @@ and injected `<script>` and `<template>` type errors surface at the identical
    `--baseline` JSON accepts those known divergences by `(file, code, message-prefix)`
    and warns on stale entries so the list can't silently rot.
 
+## Parity posture — what "vue-tsc parity" does and does not mean
+
+`tsgoblin`'s guarantee is **vue-tsc parity**, reached as:
+
+```
+reported diagnostics  =  raw tsgo output  −  template glue  −  N reviewed known-divergences
+```
+
+It is **not** a claim that tsgo and vue-tsc emit byte-identical raw diagnostics. tsgo is
+a TypeScript-7 preview compiler; on any real tree it will produce a handful of
+diagnostics that `tsc`/`vue-tsc` (5.x) do not — genuine **checker/lib differences**, not
+bugs in your code. Examples seen in practice: excess-property checks on an object literal
+containing a spread (tsc relaxes them, tsgo doesn't), a newer vendored `lib.dom.d.ts`, and
+library overload-resolution differences.
+
+Parity is achieved by subtracting exactly those via the reviewed `--baseline` allowlist —
+each entry **individually root-caused** and matched on `(file, code, message-prefix)`, with
+a stale-entry warning so it can't silently absorb new errors. The net result equals what
+`vue-tsc` reports (typically 0). As tsgo converges with tsc, the baseline shrinks toward
+empty and disappears.
+
+The `npm run parity` guard (below) is what keeps this honest: it asserts tsgoblin's output
+**equals real `vue-tsc`'s** on a fixture and runs in CI on every push + weekly, so a tsgo
+release that diverges on anything **outside** the reviewed baseline turns CI red rather
+than passing silently.
+
 ## Install
 
 Consume it straight from GitHub as a pinned git dependency (no registry publish
