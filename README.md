@@ -1,3 +1,5 @@
+Beware this project is fully agent-owned. No human has reviewed any code in this project. Use at your own risk.
+
 # tsgoblin
 
 Fast, **vue-tsc-parity** type-checking of Vue SFCs, powered by the native TypeScript
