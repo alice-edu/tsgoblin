@@ -1,6 +1,6 @@
 {
   "name": "tsgoblin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fast, vue-tsc-parity Vue SFC type-checking powered by the native TypeScript compiler (tsgo).",
   "type": "module",
   "bin": {
@@ -14,8 +14,9 @@
   "scripts": {
     "selftest": "node test/selftest.mjs",
     "parity": "node test/parity.mjs",
-    "test": "node test/selftest.mjs && node test/parity.mjs",
-    "prepublishOnly": "node test/selftest.mjs && node test/parity.mjs"
+    "engine": "node test/engine.mjs",
+    "test": "node test/selftest.mjs && node test/parity.mjs && node test/engine.mjs",
+    "prepublishOnly": "node test/selftest.mjs && node test/parity.mjs && node test/engine.mjs"
   },
   "keywords": [
     "vue",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "vue": "^3.5.39",
     "vue-tsc": "3.2.2"
   }
 }
