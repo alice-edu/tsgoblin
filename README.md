@@ -30,6 +30,27 @@ and injected `<script>` and `<template>` type errors surface at the identical
    not land in such a region, and **remaps survivors back to the original `.vue`
    line/col**. Diagnostics in real `.ts` files pass through unchanged.
 
+   Two details of Volar's rule are easy to get wrong and both cause **silently dropped
+   real errors**, so they are reproduced exactly:
+
+   - Volar's offset test is **inclusive at both ends**
+     (`@volar/source-map/lib/translateOffset.js`), so a **zero-length** mapping matches at
+     exactly its offset. The Vue codegen uses zero-length mappings as the anchor for a
+     generated expression's start — e.g. at the `__VLS_ctx` of `__VLS_ctx.someProp` — and
+     that is precisely where TS reports whole-expression diagnostics (`TS18048` possibly
+     undefined, `TS2531`/`TS2532` possibly null, `TS2349` not callable). A half-open bound
+     matches none of them.
+   - A `verification` **object** may carry a `shouldReport(source, code)` predicate that
+     Volar evaluates per diagnostic, suppressing specific codes on specific ranges
+     (`codeFeatures.doNotReportTs2339AndTs2551` on a resolved component name, and so on).
+     `generate` probes that predicate over the TS diagnostic-code space and persists the
+     suppressed set into the manifest, so `check` can apply it without the function.
+
+   Volar additionally requires a diagnostic's **end** offset to map, which tsgoblin cannot
+   model (tsgo's machine-readable output carries only the start position). tsgoblin
+   therefore keys on the start alone, making its surviving set a **superset** of Volar's:
+   it can over-report, never silently drop.
+
 4. **Divergence baseline (optional, `--baseline`).** `tsgo` and `tsc` are different
    compilers with (currently) a few genuine checker/lib differences. A small, reviewed
    `--baseline` JSON accepts those known divergences by `(file, code, message-prefix)`

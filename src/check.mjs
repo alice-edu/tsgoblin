@@ -48,6 +48,11 @@ const MSG_KEY_LEN = 60
 const baselineKey = (file, code, msg) => `${file}::${code}::${msg.slice(0, MSG_KEY_LEN)}`
 const baselineKeys = new Set(baseline.map((e) => baselineKey(e.file, e.code, e.msg)))
 
+// The manifest layout this file knows how to read; must equal generate.mjs's
+// CODEGEN_VERSION. Reading an older manifest with the wrong segment stride would
+// misinterpret every offset and silently report nonsense, so refuse instead.
+const MANIFEST_VERSION = 4
+
 // Merge the default manifest with any --maps= manifests (files keyed by abs path).
 const mapsPaths = [path.join(root, '.tsgoblin-maps.json'), ...extraMaps]
 const maps = { files: {} }
@@ -56,7 +61,14 @@ for (const mp of mapsPaths) {
     console.error(`[tsgoblin] missing ${mp} — run \`tsgoblin generate\` first`)
     process.exit(2)
   }
-  Object.assign(maps.files, JSON.parse(fs.readFileSync(mp, 'utf8')).files)
+  const m = JSON.parse(fs.readFileSync(mp, 'utf8'))
+  if (m.version !== MANIFEST_VERSION) {
+    console.error(
+      `[tsgoblin] ${mp} was written by codegen v${m.version ?? '?'}, this check expects v${MANIFEST_VERSION} — re-run \`tsgoblin generate\``,
+    )
+    process.exit(2)
+  }
+  Object.assign(maps.files, m.files)
 }
 
 // Resolve the tsgo binary from the workspace root's node_modules.
@@ -101,25 +113,62 @@ function getStarts(file) {
   return e
 }
 
-// A diagnostic in a generated file survives iff its start offset is within a
-// verification-enabled segment; returns the remapped .vue position, or null to drop.
-function remap(genFileAbs, line, col) {
+// Volar's bounds test (@volar/source-map/lib/translateOffset.js:11,29) is
+// `start >= fromOffset && start <= fromOffset + fromLength` — INCLUSIVE at the upper
+// end, so a ZERO-LENGTH mapping matches at exactly its offset. That is not a rounding
+// detail. Volar's Vue template codegen emits zero-length mappings as the anchor for a
+// generated expression's start — e.g. one at the `__VLS_ctx` of `__VLS_ctx.someProp`,
+// pointing back at the bare `someProp` in the .vue — and TS reports whole-expression
+// diagnostics (TS18048 possibly-undefined, TS2531/TS2532 possibly-null, TS2349
+// not-callable) at exactly that start. tsgoblin's half-open `off < gEnd` could never
+// match a zero-length segment, so every such diagnostic was misclassified as template
+// glue and silently dropped — a false green (ALI-7886).
+//
+// Which candidate wins matters for the reported column, so the scan is two-tier,
+// mirroring Volar's `findMatchingStartEnd` (@volar/source-map/lib/sourceMap.js:46-71):
+// Volar yields FIRST from a mapping that maps the diagnostic's start AND its end, and
+// only falls back to a start-only match when no mapping covers both. A mapping that can
+// cover an end strictly greater than the start must extend past the start — i.e. exactly
+// the segments in TIER 1 below. So:
+//   tier 1  segments that EXTEND PAST off (off < gStart + genLen) — the pre-existing
+//           half-open rule, so every diagnostic kept before is kept at the same position;
+//   tier 2  segments that merely TOUCH off (off === gStart + genLen, which is where
+//           zero-length anchors live) — purely additive, recovering the dropped ones.
+// Making tier 1 win reproduces vue-tsc's column on a prop-type error (it reports the
+// prop NAME, not the `:` before it), which a single inclusive pass gets wrong.
+//
+// Deliberate deviation, in the SAFE direction: Volar's end-offset requirement itself is
+// not modelled — tsgo's `--pretty false` output carries only `(line,col)`, i.e. the
+// start, so there is no length to test. Keying on the start alone makes tsgoblin's
+// surviving set a SUPERSET of Volar's: tsgoblin can over-report, never silently drop.
+const SEG_STRIDE = 5 // [genStart, genLen, srcStart, srcLen, denyId] — see generate.mjs
+
+// The first segment in the given tier that covers `off` and whose per-code suppression
+// (Volar's `verification.shouldReport`, probed + serialized by generate.mjs) admits
+// `bareCode`, remapped to a .vue position. null when the tier has no such segment.
+function matchTier(entry, off, bareCode, extendsPast) {
+  const seg = entry.seg
+  for (let i = 0; i < seg.length; i += SEG_STRIDE) {
+    const gStart = seg[i]
+    const genLen = seg[i + 1]
+    if (extendsPast ? !(off >= gStart && off < gStart + genLen) : off !== gStart + genLen) continue
+    const denyId = seg[i + 4]
+    if (denyId !== 0 && entry.deny[denyId - 1].includes(bareCode)) continue
+    const srcOff = seg[i + 2] + Math.min(off - gStart, seg[i + 3])
+    const p = offsetToPos(getStarts(entry.vue), srcOff)
+    return { keep: true, vue: entry.vue, line: p.line, col: p.col }
+  }
+  return null
+}
+
+// A diagnostic in a generated file survives iff some verification-enabled segment covers
+// its start offset and admits its code; returns the remapped .vue position, else drop.
+function remap(genFileAbs, line, col, code) {
   const entry = maps.files[genFileAbs]
   if (!entry) return { keep: true } // not a tracked generated file → keep as-is
-  const genStarts = getStarts(genFileAbs)
-  const off = posToOffset(genStarts, line, col)
-  const seg = entry.seg
-  for (let i = 0; i < seg.length; i += 3) {
-    const gStart = seg[i]
-    const gEnd = seg[i + 1]
-    if (off >= gStart && off < gEnd) {
-      const srcOff = seg[i + 2] + (off - gStart)
-      const srcStarts = getStarts(entry.vue)
-      const p = offsetToPos(srcStarts, srcOff)
-      return { keep: true, vue: entry.vue, line: p.line, col: p.col }
-    }
-  }
-  return { keep: false }
+  const off = posToOffset(getStarts(genFileAbs), line, col)
+  const bareCode = code.startsWith('TS') ? code.slice(2) : code
+  return matchTier(entry, off, bareCode, true) ?? matchTier(entry, off, bareCode, false) ?? { keep: false }
 }
 
 const incremental = process.argv.includes('--incremental')
@@ -141,6 +190,18 @@ const out = (res.stdout || '') + (res.stderr || '')
 // Parse: `path(line,col): error TSxxxx: message`  (paths relative to the tsgo cwd)
 const diagRe = /^(.+?)\((\d+),(\d+)\): (error|warning) (TS\d+): (.*)$/
 const lines = out.split('\n')
+// tsgo exits non-zero both for "found type errors" and for "failed to run at all"
+// (spawn failure, crash, unreadable config). In the second case there is nothing for
+// diagRe to match, and reporting "0 real errors, exit 0" would be a false green — the
+// one outcome a type gate must never produce. Distinguish the two by whether tsgo
+// emitted any parseable diagnostic at all.
+if ((res.error || res.status !== 0) && !lines.some((l) => diagRe.test(l))) {
+  console.error(
+    `[tsgoblin] tsgo failed to run (status ${res.status}${res.signal ? `, signal ${res.signal}` : ''}) and produced no parseable diagnostics:`,
+  )
+  console.error(res.error ? String(res.error) : out.trim() || '(no output)')
+  process.exit(2)
+}
 let droppedVue = 0
 // Each survivor: the display file (remapped to .vue where applicable) + parts.
 const survivors = []
@@ -152,7 +213,7 @@ for (let i = 0; i < lines.length; i++) {
   const abs = path.resolve(root, relPath)
   const isGen = abs.endsWith('.vue.ts') && maps.files[abs]
   if (isGen) {
-    const r = remap(abs, Number(lineS), Number(colS))
+    const r = remap(abs, Number(lineS), Number(colS), code)
     if (!r.keep) {
       droppedVue++
       continue
