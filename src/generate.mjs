@@ -35,9 +35,16 @@ const BANNER_LEN = BANNER.length
 // these because Volar suppresses diagnostics in non-verified regions; raw tsgo
 // does not. Repair the known syntax-invalid shapes into valid-but-inert TS.
 // CRITICAL: these transforms MUST be length-preserving, or generatedOffsets in the
-// manifest desync from the on-disk text. `(__VLS_ctx.)` → `(__VLS_ctx )` (dot→space).
+// manifest desync from the on-disk text — hence a 10-char replacement for the
+// 10-char `__VLS_ctx.`.
+// The replacement must also be inert to the CHECKER, not merely parseable: the
+// earlier `__VLS_ctx ` (dot→space) still evaluated to the real component-context
+// object, so `{ onNodeClick: (__VLS_ctx ) }` produced a genuine TS2322 ("ctx is not
+// assignable to the handler type") that vue-tsc never reports. `(0 as any)` carries
+// no type of its own, so the repaired glue contributes no diagnostics at all.
+const CTX_GLUE_REPAIR = '(0 as any)'
 function sanitize(text) {
-  return text.replace(/__VLS_ctx\.(?=[)\]},;\s])/g, '__VLS_ctx ')
+  return text.replace(/__VLS_ctx\.(?=[)\]},;\s])/g, CTX_GLUE_REPAIR)
 }
 
 // Volar's isDiagnosticsEnabled: verification === true, or a non-null object
@@ -47,11 +54,55 @@ function verificationEnabled(data) {
   return v === true || (typeof v === 'object' && v !== null)
 }
 
+// A `verification` OBJECT may carry a `shouldReport(source, code)` predicate that Volar
+// evaluates PER DIAGNOSTIC (`shouldReportDiagnostics`, @volar/language-core/lib/editor.js).
+// That is how @vue/language-core suppresses TS2339/TS2551 on a resolved component name,
+// TS2353/TS2561 on forwarded props/events, and TS6133 on an unused script binding, while
+// still type-checking those ranges for everything else. A predicate cannot go into a JSON
+// manifest, so probe it here over the TS diagnostic-code space and persist the set of codes
+// it suppresses. Probing DERIVES the suppression from the predicate rather than hard-coding
+// today's `codeFeatures.doNotReportTsXXXX` set, so a new one is honoured automatically.
+const PROBE_RANGES = [
+  [1000, 19999], // TS error codes (1xxx syntactic … 18xxx)
+  [80000, 80999], // suggestion diagnostics
+]
+// Volar passes `String(diagnostic.source)`; tsc leaves `source` unset, so the real call is
+// with the string "undefined". Probe "ts" as well and treat a code as suppressed only when
+// it is suppressed under BOTH — an unknown source-sensitive predicate then errs toward
+// REPORTING, never toward a silent drop.
+const PROBE_SOURCES = ['undefined', 'ts']
+const denyCache = new Map()
+// → null (report every code) | 'all' (report nothing) | string[] (codes to suppress)
+function probeSuppressedCodes(verification) {
+  if (typeof verification !== 'object' || verification === null) return null
+  if (typeof verification.shouldReport !== 'function') return null
+  if (denyCache.has(verification)) return denyCache.get(verification)
+  const deny = []
+  let probed = 0
+  for (const [lo, hi] of PROBE_RANGES) {
+    for (let c = lo; c <= hi; c++) {
+      probed++
+      const code = String(c)
+      let suppressed = true
+      for (const source of PROBE_SOURCES) {
+        if ((verification.shouldReport(source, code) ?? true) === true) {
+          suppressed = false
+          break
+        }
+      }
+      if (suppressed) deny.push(code)
+    }
+  }
+  const result = deny.length === probed ? 'all' : deny.length === 0 ? null : deny
+  denyCache.set(verification, result)
+  return result
+}
+
 // Bump when the codegen OUTPUT format changes (sanitize rules, banner, manifest
 // shape, @vue/language-core upgrade). A mismatch invalidates the whole cache so
 // `--incremental` can never serve stale `*.vue.ts` from an older codegen. This is
 // the guard that keeps incremental === full-regen (correctness > speed).
-const CODEGEN_VERSION = 3
+const CODEGEN_VERSION = 4
 
 const t0 = performance.now()
 const argv = process.argv.slice(2)
@@ -115,18 +166,36 @@ function processVue(fileName, source) {
   const outFile = fileName + ext
   fs.writeFileSync(outFile, BANNER + serviceText)
 
-  // Verification-enabled generated ranges (banner-adjusted) + source offset, as
-  // flat triples [genStart, genEnd, srcStart] to keep the manifest compact.
+  // Verification-enabled generated ranges (banner-adjusted), as flat 5-tuples
+  // [genStart, genLen, srcStart, srcLen, denyId] to keep the manifest compact.
+  // genLen/srcLen are kept separate because Volar's own `getLengths` reads
+  // `generatedLengths ?? lengths` for the generated side, and translateOffset clamps
+  // the mapped offset by the TARGET length. denyId is 1-based into `deny` (0 = no
+  // per-code suppression); a mapping whose predicate suppresses everything is dropped
+  // outright, exactly like `verification: false`.
   const seg = []
+  const deny = []
+  const denyId = new Map()
   for (const mapping of code.mappings) {
     if (!verificationEnabled(mapping.data)) continue
+    const suppressed = probeSuppressedCodes(mapping.data.verification)
+    if (suppressed === 'all') continue
+    let id = 0
+    if (suppressed !== null) {
+      id = denyId.get(suppressed) ?? 0
+      if (id === 0) {
+        deny.push(suppressed)
+        id = deny.length
+        denyId.set(suppressed, id)
+      }
+    }
     const { sourceOffsets, generatedOffsets, lengths } = mapping
+    const generatedLengths = mapping.generatedLengths ?? lengths
     for (let i = 0; i < generatedOffsets.length; i++) {
-      const gStart = generatedOffsets[i] + BANNER_LEN
-      seg.push(gStart, gStart + lengths[i], sourceOffsets[i])
+      seg.push(generatedOffsets[i] + BANNER_LEN, generatedLengths[i], sourceOffsets[i], lengths[i], id)
     }
   }
-  return { outFile, entry: { vue: fileName, seg } }
+  return { outFile, entry: { vue: fileName, seg, deny } }
 }
 
 let written = 0

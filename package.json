@@ -1,6 +1,6 @@
 {
   "name": "tsgoblin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Fast, vue-tsc-parity Vue SFC type-checking powered by the native TypeScript compiler (tsgo).",
   "type": "module",
   "bin": {
