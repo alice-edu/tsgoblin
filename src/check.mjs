@@ -172,15 +172,31 @@ function remap(genFileAbs, line, col, code) {
 }
 
 const incremental = process.argv.includes('--incremental')
+// tsgo is TypeScript 7, where `types` defaults to `[]` (microsoft/TypeScript#63054):
+// @types packages under typeRoots are no longer auto-included as globals, so a tsgo
+// program can be MISSING ambient declarations that tsc 5.x — and therefore vue-tsc,
+// our parity oracle — puts in. A missing global makes types collapse to a weaker
+// shape, which SILENCES real errors rather than adding noise: a false green, the one
+// outcome a type gate must never produce. `--types '*'` is the upstream opt-back-in
+// wildcard and reproduces tsc's program exactly. It cannot live in the shared
+// tsconfig because tsc 5.x rejects `"*"` with TS2688, so it is injected here, on the
+// tsgo invocation only.
+const typesWildcard = process.argv.includes('--types-wildcard')
 const tsgo = findTsgo()
 // --pretty false forces the machine-parseable `path(line,col): error TSxxxx:` format.
 // tsgo does NOT auto-disable pretty/ANSI on a non-TTY pipe, so without this the diag
 // regex below matches nothing (silent false-green).
+//
+// `--types` is rejected alongside `--build` (TS5094), so build mode carries the
+// wildcard in the derived tsconfig's compilerOptions instead — see build.mjs.
 const args = buildMode
   ? ['--build', tsconfigArg, '--verbose', '--pretty', 'false']
-  : incremental
-    ? ['-p', tsconfigArg, '--incremental', '--tsBuildInfoFile', 'dist/.tsgo-tsbuildinfo', '--pretty', 'false']
-    : ['--noEmit', '-p', tsconfigArg, '--pretty', 'false']
+  : [
+      ...(incremental
+        ? ['-p', tsconfigArg, '--incremental', '--tsBuildInfoFile', 'dist/.tsgo-tsbuildinfo', '--pretty', 'false']
+        : ['--noEmit', '-p', tsconfigArg, '--pretty', 'false']),
+      ...(typesWildcard ? ['--types', '*'] : []),
+    ]
 
 const t0 = performance.now()
 const res = spawnSync(tsgo, args, { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })

@@ -1,0 +1,6 @@
+{
+  "name": "@types/ambient-probe",
+  "version": "1.0.0",
+  "main": "",
+  "types": "index.d.ts"
+}
