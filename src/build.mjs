@@ -19,6 +19,7 @@
 // No `.tsgo` variants, no emit variant, no orchestration config — the reference graph
 // IS the build plan. Usage:
 //   tsgoblin build <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>]
+//                             [--types-wildcard]
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -28,10 +29,17 @@ import ts from 'typescript'
 const here = path.dirname(new URL(import.meta.url).pathname)
 const argv = process.argv.slice(2)
 const incremental = argv.includes('--incremental')
+// See the long note in check.mjs: tsgo (TS7) defaults `types` to `[]`, so ambient
+// @types globals tsc 5.x auto-includes go missing and real errors are silenced.
+// `--build` rejects the `--types` CLI flag (TS5094), so here the wildcard rides in
+// the derived tsconfig's compilerOptions instead.
+const typesWildcard = argv.includes('--types-wildcard')
 const opt = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3)
 const rootArg = argv.find((a) => !a.startsWith('--'))
 if (!rootArg) {
-  console.error('Usage: tsgoblin build <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>]')
+  console.error(
+    'Usage: tsgoblin build <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--types-wildcard]',
+  )
   process.exit(2)
 }
 const repoRoot = opt('repo-root') ? path.resolve(opt('repo-root')) : process.cwd()
@@ -121,6 +129,12 @@ for (const [cfg, info] of vueProjects) {
       noEmit: false,
       outDir: `${OUT}/decls`,
       tsBuildInfoFile: `${OUT}/tsbuildinfo`,
+      // PARTIAL by construction: a derived config is synthesized only for has-.vue
+      // projects (step 2), so pure-TS references still build from their REAL config and
+      // keep tsgo's narrow `types: []`. Covering them too would mean synthesizing a
+      // derived config for every project in the graph — a change to the build model,
+      // deliberately not made here.
+      ...(typesWildcard ? { types: ['*'] } : {}),
     },
     references,
     files: files.map((f) => rel(info.dir, f)),

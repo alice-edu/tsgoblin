@@ -17,3 +17,8 @@ test/fixture-multi/**/.tsgoblin-cache.json
 test/fixture-multi/**/.tsgoblin-build.tsconfig.json
 test/fixture-multi/**/.tsgoblin-build/
 test/fixture-multi/**/dist/
+test/fixture-types/src/**/*.vue.ts
+test/fixture-types/.tsgoblin-generated.json
+test/fixture-types/.tsgoblin-maps.json
+test/fixture-types/.tsgoblin-cache.json
+test/fixture-types/**/*.tsbuildinfo

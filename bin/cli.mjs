@@ -4,10 +4,15 @@
 // engine smoke-test (selftest).
 //
 //   tsgoblin build     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>]
+//                                 [--types-wildcard]
 //   tsgoblin generate  <tsconfig> [--incremental] [--src-dir=<dir>]
 //   tsgoblin check     <tsconfig> [--incremental] [--repo-root=<dir>]
 //                                 [--baseline=<path>] [--maps=<path> ...]
-//                                 [--write-baseline] [--build]
+//                                 [--write-baseline] [--build] [--types-wildcard]
+//
+// --types-wildcard restores tsc 5.x's automatic inclusion of every @types package
+// under typeRoots, which tsgo (TS7) dropped. Without it tsgo's program can be missing
+// ambient globals vue-tsc has, which SILENCES real errors. Off by default.
 //   tsgoblin check-all <config.json> [--incremental]
 //   tsgoblin selftest  <check-tsconfig> [--generate=<tsconfig>] [--src-dir=<dir>]
 //                                 [--repo-root=<dir>] [--baseline=<path>]
@@ -28,9 +33,9 @@ const scripts = {
 
 if (!scripts[cmd]) {
   console.error('Usage: tsgoblin <build|generate|check|check-all|selftest> <arg> [options]\n')
-  console.error('  build     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>]  (vue-tsc --build drop-in)')
+  console.error('  build     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--types-wildcard]  (vue-tsc --build drop-in)')
   console.error('  generate  <tsconfig> [--incremental] [--src-dir=<dir>]')
-  console.error('  check     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--maps=<path> ...]')
+  console.error('  check     <tsconfig> [--incremental] [--repo-root=<dir>] [--baseline=<path>] [--maps=<path> ...] [--types-wildcard]')
   console.error('  check-all <config.json> [--incremental]')
   console.error('  selftest  <check-tsconfig> [--generate=<tsconfig>] [--src-dir=<dir>] [--repo-root=<dir>] [--baseline=<path>]')
   process.exit(2)

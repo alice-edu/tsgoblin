@@ -16,8 +16,9 @@
     "parity": "node test/parity.mjs",
     "engine": "node test/engine.mjs",
     "build-test": "node test/build.mjs",
-    "test": "node test/selftest.mjs && node test/parity.mjs && node test/engine.mjs && node test/build.mjs",
-    "prepublishOnly": "node test/selftest.mjs && node test/parity.mjs && node test/engine.mjs && node test/build.mjs"
+    "types-wildcard": "node test/types-wildcard.mjs",
+    "test": "node test/selftest.mjs && node test/parity.mjs && node test/engine.mjs && node test/build.mjs && node test/types-wildcard.mjs",
+    "prepublishOnly": "node test/selftest.mjs && node test/parity.mjs && node test/engine.mjs && node test/build.mjs && node test/types-wildcard.mjs"
   },
   "keywords": [
     "vue",
